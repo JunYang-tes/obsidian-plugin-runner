@@ -11,16 +11,20 @@ describe('transform', () => {
   display(console.log(this.b));
 }`;
 
-    const result = transform(sourceCode, globals);
+    const { code, dependencies, provides } = transform(sourceCode, globals);
 
-    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual(['b']);
   });
 
   it('should add function to this',()=>{
 		const sourceCode = 'b = 1; function a(){}'
 		const expectedCode = `async function(){this.b=1;display(this.a=functiona(){});}`
-    const result = transform(sourceCode, []);
-    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    const { code, dependencies, provides } = transform(sourceCode, []);
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual(['b', 'a']);
 	})
 
   it('should call display with the last expression value', () => {
@@ -30,9 +34,11 @@ describe('transform', () => {
   display(a + 1);
 }`;
 
-    const result = transform(sourceCode);
+    const { code, dependencies, provides } = transform(sourceCode);
 
-    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual([]);
   });
 
   it("should call display with the literal value", () => {
@@ -40,8 +46,10 @@ describe('transform', () => {
     const expectedCode = `async function () {
    display(1);
   }`
-    const result = transform(sourceCode)
-    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    const { code, dependencies, provides } = transform(sourceCode)
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual([]);
   })
 
   it('should transform import statements to await import', () => {
@@ -53,8 +61,41 @@ describe('transform', () => {
       display(undefined);
     }`;
 
-    const result = transform(sourceCode);
+    const { code, dependencies, provides } = transform(sourceCode);
 
-    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual([]);
+  });
+});
+
+
+describe('transform dependencies and provides', () => {
+  it('should identify a simple dependency', () => {
+    const sourceCode = 'const a = this.b;';
+    const { dependencies, provides } = transform(sourceCode);
+    expect(dependencies).toEqual(['b']);
+    expect(provides).toEqual([]);
+  });
+
+  it('should identify a simple provide', () => {
+    const sourceCode = 'this.a = 1;';
+    const { dependencies, provides } = transform(sourceCode);
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual(['a']);
+  });
+
+  it('should identify a function provide', () => {
+    const sourceCode = 'function a() {}';
+    const { dependencies, provides } = transform(sourceCode);
+    expect(dependencies).toEqual([]);
+    expect(provides).toEqual(['a']);
+  });
+
+  it('should handle mixed dependencies and provides', () => {
+    const sourceCode = 'this.a = this.b + 1; function c() { return this.d; }';
+    const { dependencies, provides } = transform(sourceCode);
+    expect(dependencies.sort()).toEqual(['b', 'd'].sort());
+    expect(provides.sort()).toEqual(['a', 'c'].sort());
   });
 });

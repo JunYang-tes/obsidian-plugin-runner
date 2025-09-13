@@ -71,6 +71,26 @@ export function transform(src: string, globals: string[] = []) {
     }
   });
 
+  const dependencies = new Set<string>();
+  const provides = new Set<string>();
+
+  traverse(ast, {
+    MemberExpression(path) {
+      if (t.isThisExpression(path.node.object)) {
+        const property = path.node.property as t.Identifier;
+        const propertyName = property.name;
+
+        if (t.isAssignmentExpression(path.parent) && path.parent.left === path.node) {
+          provides.add(propertyName);
+        } else {
+						if(!provides.has(propertyName)) {
+								dependencies.add(propertyName);
+						}
+				}
+      }
+    }
+  });
+
   const body = ast.program.body;
   const lastStatement = body[body.length - 1];
 
@@ -82,7 +102,11 @@ export function transform(src: string, globals: string[] = []) {
 
   const functionExpression = t.functionExpression(null, [], t.blockStatement(body), false, true);
 
-  return generate(functionExpression).code;
+  return {
+    code: generate(functionExpression).code,
+    dependencies: [...dependencies],
+    provides: [...provides]
+  };
 }
 
 export function isUndeclaredVariable(
