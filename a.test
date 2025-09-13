@@ -1,0 +1,19 @@
+
+ DEV  v3.2.4 /home/yj/Documents/notes/.obsidian/plugins/obsidian-sample-plugin
+
+ ❯ src/code.test.ts (4 tests | 1 failed) 20ms
+   ✓ transform > should wrap the code in a function and add "this." prefix to undeclared variables 11ms
+   × transform > should add function to this 7ms
+     → expected 'function(){this.b=1;functiona(){}disp…' to be 'function(){this.b=1;this.a=functiona(…' // Object.is equality
+   ✓ transform > should call display with the last expression value 1ms
+   ✓ transform > should call display with the literal value 0ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  19:05:00
+   Duration  327ms (transform 29ms, setup 0ms, collect 161ms, tests 20ms, environment 0ms, prepare 47ms)
+
+ FAIL  Tests failed. Watching for file changes...
+       press h to show help, press q to quit
+Cancelling test run. Press CTRL+c again to exit forcefully.
+
