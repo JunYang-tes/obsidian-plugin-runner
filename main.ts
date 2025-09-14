@@ -32,11 +32,11 @@ export default class MyPlugin extends Plugin {
         const display = getDisplay(disEl);
         const name = `block ${count++}`;
         states.set(el, { name, display });
-        runner.run(src, name, display)
+        runner.run(src, name, display,globals)
           .catch(display)
       } else {
         const { name, display } = s
-        runner.run(src, name, display)
+        runner.run(src, name, display,globals)
           .catch(display)
       }
     })

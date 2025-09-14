@@ -16,9 +16,10 @@ export class Runner {
 
   async run(
     src: string, name: string,
-    display: (val: any) => void
+    display: (val: any) => void,
+    globals: string[] = []
   ) {
-    const { code, dependencies, provides } = transform(src);
+    const { code, dependencies, provides } = transform(src,globals);
     const dataUri = `data:text/javascript,${encodeURIComponent(`export default ${code}`)}`;
     const { default: f } = await import(dataUri);
 
