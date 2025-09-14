@@ -20,7 +20,7 @@ describe('transform', () => {
 
   it('should add function to this',()=>{
 		const sourceCode = 'b = 1; function a(){}'
-		const expectedCode = `async function(){this.vars.b=1;display(this.vars.a=functiona(){});}`
+		const expectedCode = `async function(){this.vars.b=1;display(this.vars.a=functiona(){}.bind(this));}`
     const { code, dependencies, provides } = transform(sourceCode, []);
     expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
     expect(dependencies).toEqual([]);
