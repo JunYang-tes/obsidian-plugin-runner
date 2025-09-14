@@ -7,6 +7,7 @@ interface CodeBlock {
   display: (val: any) => void
 }
 
+
 export class Runner {
   codeBlocks: Map<string, CodeBlock> = new Map();
   vars: Record<string, any> = {};
@@ -60,8 +61,8 @@ export class Runner {
 
       const block = this.codeBlocks.get(blockName);
       if (!block) {
-          path.delete(blockName);
-          return;
+        path.delete(blockName);
+        return;
       };
 
       const d = (globalThis as any).display;
@@ -75,14 +76,10 @@ export class Runner {
           await executeAndPropagate(dependentName, path);
         }
       }
-      
+
       path.delete(blockName);
     };
 
-    try {
-      await executeAndPropagate(name);
-    } catch (e) {
-      console.error(e);
-    }
+    await executeAndPropagate(name);
   }
 }
