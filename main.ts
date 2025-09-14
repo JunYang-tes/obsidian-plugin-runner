@@ -1,47 +1,57 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { transform } from './src/code';
+import { Runner } from 'src/runner';
+import { getDisplay } from 'src/display';
 
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
-	mySetting: string;
+  mySetting: string;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+  mySetting: 'default'
 }
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+  settings: MyPluginSettings;
 
-	async onload() {
-		await this.loadSettings();
+  async onload() {
+    await this.loadSettings();
+    const globals = [
+      ...Object.keys(globalThis)];
+    const runner = new Runner()
+    let count = 0;
+    const states = new WeakMap<HTMLElement, { name: string, display: (val: any) => void }>();
 
-		const sampleCode = `
-		  const a = 1;
-		  b = a + 1;
-      console.log(b);
-		`;
+    this.registerMarkdownCodeBlockProcessor("run-js", (src, el, ctx) => {
+      let s = states.get(el);
+      if (s == null) {
+        const root = el.createEl("div");
+        const disEl = root.createEl("div");
+        const display = getDisplay(disEl);
+        const name = `block ${count++}`;
+        states.set(el, { name, display });
+        runner.run(src, name, display)
+          .catch(display)
+      } else {
+        const { name, display } = s
+        runner.run(src, name, display)
+          .catch(display)
+      }
+    })
+  }
 
-    const globals = ['console'];
+  onunload() {
 
-		const transformedCode = transform(sampleCode, globals);
-		console.log('Transformed code:', transformedCode);
+  }
 
-		this.registerMarkdownCodeBlockProcessor("run-js", () => { 
-		})
-	}
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
 
-	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }
 
