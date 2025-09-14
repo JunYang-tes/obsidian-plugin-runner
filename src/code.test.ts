@@ -7,8 +7,8 @@ describe('transform', () => {
     const globals = ['console'];
     const expectedCode = `async function () {
   const a = 1;
-  this.b = a + 1;
-  display(console.log(this.b));
+  this.vars.b = a + 1;
+  display(console.log(this.vars.b));
 }`;
 
     const { code, dependencies, provides } = transform(sourceCode, globals);
@@ -20,7 +20,7 @@ describe('transform', () => {
 
   it('should add function to this',()=>{
 		const sourceCode = 'b = 1; function a(){}'
-		const expectedCode = `async function(){this.b=1;display(this.a=functiona(){});}`
+		const expectedCode = `async function(){this.vars.b=1;display(this.vars.a=functiona(){});}`
     const { code, dependencies, provides } = transform(sourceCode, []);
     expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
     expect(dependencies).toEqual([]);
@@ -72,14 +72,14 @@ describe('transform', () => {
 
 describe('transform dependencies and provides', () => {
   it('should identify a simple dependency', () => {
-    const sourceCode = 'const a = this.b;';
-    const { dependencies, provides } = transform(sourceCode);
+    const sourceCode = 'const a = b;';
+    const { dependencies, provides,code } = transform(sourceCode);
     expect(dependencies).toEqual(['b']);
     expect(provides).toEqual([]);
   });
 
   it('should identify a simple provide', () => {
-    const sourceCode = 'this.a = 1;';
+    const sourceCode = 'a = 1;';
     const { dependencies, provides } = transform(sourceCode);
     expect(dependencies).toEqual([]);
     expect(provides).toEqual(['a']);
@@ -93,7 +93,7 @@ describe('transform dependencies and provides', () => {
   });
 
   it('should handle mixed dependencies and provides', () => {
-    const sourceCode = 'this.a = this.b + 1; function c() { return this.d; }';
+    const sourceCode = 'a = b + 1; function c() { return d; }';
     const { dependencies, provides } = transform(sourceCode);
     expect(dependencies.sort()).toEqual(['b', 'd'].sort());
     expect(provides.sort()).toEqual(['a', 'c'].sort());

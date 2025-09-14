@@ -11,12 +11,12 @@ export function transform(src: string, globals: string[] = []) {
   traverse(ast, {
     ReferencedIdentifier(path) {
       if (t.isIdentifier(path.node) && isUndeclaredVariable(path.scope, path.node.name, globals)) {
-        path.replaceWith(t.memberExpression(t.thisExpression(), path.node));
+        path.replaceWith(t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), path.node));
       }
     },
     AssignmentExpression(path) {
       if (t.isIdentifier(path.node.left) && isUndeclaredVariable(path.scope, path.node.left.name, globals)) {
-        path.get('left').replaceWith(t.memberExpression(t.thisExpression(), path.node.left));
+        path.get('left').replaceWith(t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), path.node.left));
       }
     },
     FunctionDeclaration(path) {
@@ -33,7 +33,7 @@ export function transform(src: string, globals: string[] = []) {
           const assignment = t.expressionStatement(
             t.assignmentExpression(
               '=',
-              t.memberExpression(t.thisExpression(), functionName),
+              t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), functionName),
               functionExpression
             )
           );
@@ -76,7 +76,12 @@ export function transform(src: string, globals: string[] = []) {
 
   traverse(ast, {
     MemberExpression(path) {
-      if (t.isThisExpression(path.node.object)) {
+      if (
+        t.isMemberExpression(path.node.object) &&
+        t.isThisExpression(path.node.object.object) &&
+        t.isIdentifier(path.node.object.property) &&
+        (path.node.object.property as t.Identifier).name === 'vars'
+      ) {
         const property = path.node.property as t.Identifier;
         const propertyName = property.name;
 
