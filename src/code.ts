@@ -17,6 +17,14 @@ export function transform(src: string, globals: string[] = []) {
     AssignmentExpression(path) {
       if (t.isIdentifier(path.node.left) && isUndeclaredVariable(path.scope, path.node.left.name, globals)) {
         path.get('left').replaceWith(t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), path.node.left));
+
+        if (t.isFunctionExpression(path.node.right) || t.isArrowFunctionExpression(path.node.right)) {
+            const boundFunction = t.callExpression(
+                t.memberExpression(path.node.right, t.identifier('bind')),
+                [t.thisExpression()]
+            );
+            path.get('right').replaceWith(boundFunction);
+        }
       }
     },
     FunctionDeclaration(path) {
@@ -30,11 +38,17 @@ export function transform(src: string, globals: string[] = []) {
             path.node.generator,
             path.node.async
           );
+          
+          const boundFunction = t.callExpression(
+            t.memberExpression(functionExpression, t.identifier('bind')),
+            [t.thisExpression()]
+          );
+
           const assignment = t.expressionStatement(
             t.assignmentExpression(
               '=',
               t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), functionName),
-              functionExpression
+              boundFunction
             )
           );
           path.replaceWith(assignment);
