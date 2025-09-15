@@ -2,29 +2,7 @@ import van, { PropValueOrDerived } from 'vanjs-core'
 import { Runner } from './runner'
 import { getDisplay } from './display'
 import { MarkdownPostProcessorContext, MarkdownRenderer, Plugin } from 'obsidian'
-
-const toKebabCase = (s: string) => s.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase()
-function style(s: {
-  [k in keyof CSSStyleDeclaration]?: PropValueOrDerived
-}) {
-  if (Object.values(s).every(v => typeof v === 'string')) {
-    return Object.entries(s).map(([k, v]) => `${toKebabCase(k)}:${v}`).join(';')
-  }
-
-  return () => {
-    return Object.entries(s).map(([k, v]) => {
-      if (typeof v === 'function') {
-        return [k, v()] as const
-      }
-      if (typeof v === 'object' && v) {
-        return [k, v.val] as const
-      }
-      return [k, v] as const
-    })
-      .map(([k, v]) => `${toKebabCase(k)}:${v}`)
-      .join(';')
-  }
-}
+import { style } from './builtin'
 
 export type Block = ReturnType<typeof block>
 export function block(runner: Runner, name: string) {
@@ -54,7 +32,15 @@ export function block(runner: Runner, name: string) {
     },
     srcDom,
     van.tags.hr(),
-    disEl
+    div(
+      {
+        "data-name": "Block Display",
+        style: style({
+          padding: '0 10px 10px 10px'
+        })
+      },
+      disEl
+    )
   )
   return {
     dom,

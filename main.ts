@@ -30,7 +30,6 @@ export default class MyPlugin extends Plugin {
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
 
-
     this.registerMarkdownCodeBlockProcessor("run-js", (src, el, ctx) => {
       let s = states.get(el);
       if (s == null) {
