@@ -14,6 +14,9 @@ dependencies:
   '@observablehq/inspector':
     specifier: ^5.0.1
     version: 5.0.1
+  vanjs-core:
+    specifier: ^1.5.5
+    version: 1.5.5
 
 devDependencies:
   '@babel/generator':
@@ -2102,6 +2105,10 @@ packages:
     dependencies:
       punycode: 2.3.1
     dev: true
+
+  /vanjs-core@1.5.5:
+    resolution: {integrity: sha512-BC9MjbXYIRqnwncXfacT6upJpVmIKyrV2MjZi8NuCK+yc9RP0hfdghTpmEuYswXOfkLarDPPcYK4X6q68T9e+g==}
+    dev: false
 
   /vite-node@3.2.4(@types/node@16.18.126):
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}

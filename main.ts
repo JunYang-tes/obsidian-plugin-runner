@@ -3,6 +3,7 @@ import { transform } from './src/code';
 import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
 import { builtin } from 'src/builtin';
+import { injectStyle } from 'src/style'
 
 // Remember to rename these classes and interfaces!
 
@@ -18,6 +19,7 @@ export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
 
   async onload() {
+    injectStyle()
     await this.loadSettings();
     const globals = [
       ...Object.keys(globalThis)
@@ -26,6 +28,7 @@ export default class MyPlugin extends Plugin {
     const runner = new Runner(builtin)
     let count = 0;
     const states = new WeakMap<HTMLElement, { name: string, display: (val: any) => void }>();
+
 
     this.registerMarkdownCodeBlockProcessor("run-js", (src, el, ctx) => {
       let s = states.get(el);
