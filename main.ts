@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { transform } from './src/code';
 import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
+import { builtin } from 'src/builtin';
 
 // Remember to rename these classes and interfaces!
 
@@ -19,8 +20,10 @@ export default class MyPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     const globals = [
-      ...Object.keys(globalThis)];
-    const runner = new Runner()
+      ...Object.keys(globalThis)
+    ].filter(i => i !== 'console');
+
+    const runner = new Runner(builtin)
     let count = 0;
     const states = new WeakMap<HTMLElement, { name: string, display: (val: any) => void }>();
 
@@ -32,11 +35,11 @@ export default class MyPlugin extends Plugin {
         const display = getDisplay(disEl);
         const name = `block ${count++}`;
         states.set(el, { name, display });
-        runner.run(src, name, display,globals)
+        runner.run(src, name, display, globals)
           .catch(display)
       } else {
         const { name, display } = s
-        runner.run(src, name, display,globals)
+        runner.run(src, name, display, globals)
           .catch(display)
       }
     })

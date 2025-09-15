@@ -14,9 +14,11 @@ export class Runner {
   variableProvider: Map<string, string> = new Map(); // var name -> block name
   dependents: Map<string, Set<string>> = new Map(); // block name -> set of blocks that depend on it
   globalVarsName = '__g' + Math.random().toString(36).slice(2);
-  constructor() {
-    this.vars = 
-      (globalThis as any)[this.globalVarsName] = {};
+  constructor(vars: Record<string, any> = {}) {
+    this.vars =
+      (globalThis as any)[this.globalVarsName] = {
+        ...vars
+      };
   }
 
   async run(
