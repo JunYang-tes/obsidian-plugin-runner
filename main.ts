@@ -5,6 +5,7 @@ import { getDisplay } from 'src/display';
 import { builtin } from 'src/builtin';
 import { injectStyle } from 'src/style'
 import { block, Block } from 'src/block';
+import { EditModal } from './src/EditModal';
 
 // Remember to rename these classes and interfaces!
 
@@ -34,11 +35,32 @@ export default class MyPlugin extends Plugin {
       let s = states.get(el);
       if (s == null) {
         s = block(runner, `block ${count++}`);
-        states.set(el,s)
-        el.appendChild(s.dom)
+        states.set(el, s);
+        el.appendChild(s.dom);
+
+        const controls = el.createDiv({ cls: 'plugin-runner-controls' });
+        const editButton = controls.createEl('button', { text: 'Edit' });
+        editButton.onclick = () => {
+          const onSave = (newCode: string) => {
+            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (view) {
+              const section = ctx.getSectionInfo(el);
+              if (section) {
+                // We only want to replace the code inside the block
+                view.editor.replaceRange(
+                  newCode,
+                  { line: section.lineStart + 1, ch: 0 },
+                  { line: section.lineEnd -1, ch: view.editor.getLine(section.lineEnd - 1).length }
+                );
+              }
+            }
+          };
+
+          new EditModal(this.app, src, onSave).open();
+        };
       }
       s.run(src, this, ctx);
-    })
+    });
   }
 
   onunload() {
