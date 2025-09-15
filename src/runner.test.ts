@@ -92,15 +92,15 @@ describe('Runner', () => {
     expect(displays.b).toHaveBeenCalledWith(101);
   });
 
-  it('should bind functions to the runner instance', async () => {
+  it('should handle functions using shared variables', async () => {
     const runner = new Runner();
     const display = vi.fn();
 
     // Block 1: define a variable 'a'
     await runner.run('a = 10', 'block1', display);
 
-    // Block 2: define a function 'myFunc' that uses 'a' from runner's context
-    const funcSrc = `function myFunc() { return this.vars.a + 5; }`;
+    // Block 2: define a function 'myFunc' that uses 'a'
+    const funcSrc = `function myFunc() { return a + 5; }`;
     await runner.run(funcSrc, 'block2', display);
 
     // Block 3: call the function

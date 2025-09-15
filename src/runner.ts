@@ -10,16 +10,21 @@ interface CodeBlock {
 
 export class Runner {
   codeBlocks: Map<string, CodeBlock> = new Map();
-  vars: Record<string, any> = {};
+  vars: Record<string, any>;
   variableProvider: Map<string, string> = new Map(); // var name -> block name
   dependents: Map<string, Set<string>> = new Map(); // block name -> set of blocks that depend on it
+  globalVarsName = '__g' + Math.random().toString(36).slice(2);
+  constructor() {
+    this.vars = 
+      (globalThis as any)[this.globalVarsName] = {};
+  }
 
   async run(
     src: string, name: string,
     display: (val: any) => void,
     globals: string[] = []
   ) {
-    const { code, dependencies, provides } = transform(src,globals);
+    const { code, dependencies, provides } = transform(src, globals, this.globalVarsName);
     const dataUri = `data:text/javascript,${encodeURIComponent(`export default ${code}`)}`;
     const { default: f } = await import(dataUri);
 
@@ -33,7 +38,7 @@ export class Runner {
       });
     }
     this.codeBlocks.set(name, {
-      func: f.bind(this),
+      func: f,
       dependencies,
       provides,
       display

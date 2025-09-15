@@ -5,26 +5,19 @@ import * as t from '@babel/types';
 
 type ParseResult = ReturnType<typeof parse>;
 
-export function transform(src: string, globals: string[] = []) {
+export function transform(src: string, globals: string[] = [], globalVarsName = 'globalVars') {
   const ast = parse(src, { sourceType: 'module' });
+  const allGlobals = [...globals, globalVarsName];
 
   traverse(ast, {
     ReferencedIdentifier(path) {
-      if (t.isIdentifier(path.node) && isUndeclaredVariable(path.scope, path.node.name, globals)) {
-        path.replaceWith(t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), path.node));
+      if (t.isIdentifier(path.node) && isUndeclaredVariable(path.scope, path.node.name, allGlobals)) {
+        path.replaceWith(t.memberExpression(t.identifier(globalVarsName), path.node));
       }
     },
     AssignmentExpression(path) {
-      if (t.isIdentifier(path.node.left) && isUndeclaredVariable(path.scope, path.node.left.name, globals)) {
-        path.get('left').replaceWith(t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), path.node.left));
-
-        if (t.isFunctionExpression(path.node.right) || t.isArrowFunctionExpression(path.node.right)) {
-            const boundFunction = t.callExpression(
-                t.memberExpression(path.node.right, t.identifier('bind')),
-                [t.thisExpression()]
-            );
-            path.get('right').replaceWith(boundFunction);
-        }
+      if (t.isIdentifier(path.node.left) && isUndeclaredVariable(path.scope, path.node.left.name, allGlobals)) {
+        path.get('left').replaceWith(t.memberExpression(t.identifier(globalVarsName), path.node.left));
       }
     },
     FunctionDeclaration(path) {
@@ -38,17 +31,12 @@ export function transform(src: string, globals: string[] = []) {
             path.node.generator,
             path.node.async
           );
-          
-          const boundFunction = t.callExpression(
-            t.memberExpression(functionExpression, t.identifier('bind')),
-            [t.thisExpression()]
-          );
 
           const assignment = t.expressionStatement(
             t.assignmentExpression(
               '=',
-              t.memberExpression(t.memberExpression(t.thisExpression(), t.identifier('vars')), functionName),
-              boundFunction
+              t.memberExpression(t.identifier(globalVarsName), functionName),
+              functionExpression
             )
           );
           path.replaceWith(assignment);
@@ -91,10 +79,8 @@ export function transform(src: string, globals: string[] = []) {
   traverse(ast, {
     MemberExpression(path) {
       if (
-        t.isMemberExpression(path.node.object) &&
-        t.isThisExpression(path.node.object.object) &&
-        t.isIdentifier(path.node.object.property) &&
-        (path.node.object.property as t.Identifier).name === 'vars'
+        t.isIdentifier(path.node.object) &&
+        path.node.object.name === globalVarsName
       ) {
         const property = path.node.property as t.Identifier;
         const propertyName = property.name;

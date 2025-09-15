@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { transform } from './code';
 
 describe('transform', () => {
-  it('should wrap the code in a function and add "this." prefix to undeclared variables', () => {
+  it('should wrap the code in a function and add "globalVars." prefix to undeclared variables', () => {
     const sourceCode = 'const a = 1; b = a + 1; console.log(b);';
     const globals = ['console'];
     const expectedCode = `async function () {
   const a = 1;
-  this.vars.b = a + 1;
-  display(console.log(this.vars.b));
+  globalVars.b = a + 1;
+  display(console.log(globalVars.b));
 }`;
 
     const { code, dependencies, provides } = transform(sourceCode, globals);
@@ -18,14 +18,27 @@ describe('transform', () => {
     expect(provides).toEqual(['b']);
   });
 
-  it('should add function to this',()=>{
+  it('should assign function to globalVars',()=>{
 		const sourceCode = 'b = 1; function a(){}'
-		const expectedCode = `async function(){this.vars.b=1;display(this.vars.a=functiona(){}.bind(this));}`
+		const expectedCode = `async function(){globalVars.b=1;display(globalVars.a=functiona(){});}`
     const { code, dependencies, provides } = transform(sourceCode, []);
     expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
     expect(dependencies).toEqual([]);
     expect(provides).toEqual(['b', 'a']);
 	})
+
+  it('should use the custom globalVarsName', () => {
+    const sourceCode = 'a = 1;';
+    const globalVarsName = 'myGlobals';
+    const expectedCode = `async function () {
+      display(myGlobals.a = 1);
+    }`;
+
+    const { code, provides } = transform(sourceCode, [], globalVarsName);
+
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+    expect(provides).toEqual(['a']);
+  });
 
   it('should call display with the last expression value', () => {
     const sourceCode = 'const a = 1; a + 1';
