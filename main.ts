@@ -4,6 +4,7 @@ import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
 import { builtin } from 'src/builtin';
 import { injectStyle } from 'src/style'
+import { block, Block } from 'src/block';
 
 // Remember to rename these classes and interfaces!
 
@@ -27,24 +28,17 @@ export default class MyPlugin extends Plugin {
 
     const runner = new Runner(builtin)
     let count = 0;
-    const states = new WeakMap<HTMLElement, { name: string, display: (val: any) => void }>();
+    const states = new WeakMap<HTMLElement, Block>();
 
 
     this.registerMarkdownCodeBlockProcessor("run-js", (src, el, ctx) => {
       let s = states.get(el);
       if (s == null) {
-        const root = el.createEl("div");
-        const disEl = root.createEl("div");
-        const display = getDisplay(disEl);
-        const name = `block ${count++}`;
-        states.set(el, { name, display });
-        runner.run(src, name, display, globals)
-          .catch(display)
-      } else {
-        const { name, display } = s
-        runner.run(src, name, display, globals)
-          .catch(display)
+        s = block(runner, `block ${count++}`);
+        states.set(el,s)
+        el.appendChild(s.dom)
       }
+      s.run(src, this, ctx);
     })
   }
 
