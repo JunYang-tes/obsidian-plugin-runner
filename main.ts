@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { transform } from './src/code';
 import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
@@ -30,8 +30,7 @@ export default class MyPlugin extends Plugin {
     const runner = new Runner(builtin)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
-
-    this.registerMarkdownCodeBlockProcessor("run-js", (src, el, ctx) => {
+    const runjs = (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
         s = block(runner, `block ${count++}`);
@@ -50,7 +49,7 @@ export default class MyPlugin extends Plugin {
                 view.editor.replaceRange(
                   newCode,
                   { line: section.lineStart + 1, ch: 0 },
-                  { line: section.lineEnd -1, ch: view.editor.getLine(section.lineEnd - 1).length }
+                  { line: section.lineEnd - 1, ch: view.editor.getLine(section.lineEnd - 1).length }
                 );
               }
             }
@@ -60,7 +59,18 @@ export default class MyPlugin extends Plugin {
         };
       }
       s.run(src, this, ctx);
-    });
+
+    }
+    try {
+      this.registerMarkdownCodeBlockProcessor("run-js", runjs);
+    } catch (e) {
+      new Notice('Failed to register code block processor with run-js, is it occupied by other plugin?');
+    }
+    try {
+      this.registerMarkdownCodeBlockProcessor("exec-js", runjs);
+    } catch (e) {
+      new Notice('Failed to register code block processor with exec-js, is it occupied by other plugin?');
+    }
   }
 
   onunload() {
