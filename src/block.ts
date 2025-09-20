@@ -48,7 +48,7 @@ export function block(runner: Runner, name: string, doc: string) {
     ) {
       MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
       return runner
-        .run(src, name, doc, display)
+        .run(src, name, doc, display,Object.keys(globalThis))
         .catch(display)
     }
   }
