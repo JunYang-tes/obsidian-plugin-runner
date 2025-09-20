@@ -23,17 +23,14 @@ export default class MyPlugin extends Plugin {
   async onload() {
     injectStyle()
     await this.loadSettings();
-    const globals = [
-      ...Object.keys(globalThis)
-    ].filter(i => i !== 'console');
-
     const runner = new Runner(builtin)
+    console.log(runner)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
     const runjs = (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
-        s = block(runner, `block ${count++}`);
+        s = block(runner, `block ${count++}`, ctx.sourcePath);
         states.set(el, s);
         el.appendChild(s.dom);
 

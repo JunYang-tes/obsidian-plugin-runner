@@ -5,7 +5,7 @@ import { MarkdownPostProcessorContext, MarkdownRenderer, Plugin } from 'obsidian
 import { style } from './builtin'
 
 export type Block = ReturnType<typeof block>
-export function block(runner: Runner, name: string) {
+export function block(runner: Runner, name: string, doc: string) {
   const codeExpanded = van.state(false)
   const { div, button } = van.tags
   const disEl = div()
@@ -48,7 +48,7 @@ export function block(runner: Runner, name: string) {
     ) {
       MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
       runner
-        .run(src, name, display)
+        .run(src, name, doc, display)
         .catch(display)
     }
   }

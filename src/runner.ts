@@ -7,56 +7,82 @@ interface CodeBlock {
   display: (val: any) => void
 }
 
+interface DocState {
+  codeBlocks: Map<string, CodeBlock>;
+  vars: Record<string, any>;
+  variableProvider: Map<string, string>;
+  dependents: Map<string, Set<string>>;
+  globalVarsName: string;
+}
 
 export class Runner {
-  codeBlocks: Map<string, CodeBlock> = new Map();
-  vars: Record<string, any>;
-  variableProvider: Map<string, string> = new Map(); // var name -> block name
-  dependents: Map<string, Set<string>> = new Map(); // block name -> set of blocks that depend on it
-  globalVarsName = '__g' + Math.random().toString(36).slice(2);
+  private docStates: Map<string, DocState> = new Map();
+  private initialVars: Record<string, any>;
+
   constructor(vars: Record<string, any> = {}) {
-    this.vars =
-      (globalThis as any)[this.globalVarsName] = {
-        ...vars
-      };
+    this.initialVars = vars;
+  }
+
+  private getOrInitDocState(doc: string): DocState {
+    if (!this.docStates.has(doc)) {
+      const globalVarsName = '__g' + Math.random().toString(36).slice(2);
+      const vars = { ...this.initialVars };
+      (globalThis as any)[globalVarsName] = vars;
+
+      this.docStates.set(doc, {
+        codeBlocks: new Map(),
+        vars: vars,
+        variableProvider: new Map(),
+        dependents: new Map(),
+        globalVarsName: globalVarsName,
+      });
+    }
+    return this.docStates.get(doc)!;
   }
 
   async run(
-    src: string, name: string,
+    src: string, name: string, doc: string,
     display: (val: any) => void,
     globals: string[] = []
   ) {
-    const { code, dependencies, provides } = transform(src, globals, this.globalVarsName);
+    const {
+      codeBlocks,
+      variableProvider,
+      dependents,
+      globalVarsName
+    } = this.getOrInitDocState(doc);
+
+    const { code, dependencies, provides } = transform(src, globals, globalVarsName);
     const dataUri = `data:text/javascript,${encodeURIComponent(`export default ${code}`)}`;
     const { default: f } = await import(dataUri);
 
     // Update block
-    const oldBlock = this.codeBlocks.get(name);
+    const oldBlock = codeBlocks.get(name);
     if (oldBlock) {
       oldBlock.provides.forEach(p => {
-        if (this.variableProvider.get(p) === name) {
-          this.variableProvider.delete(p);
+        if (variableProvider.get(p) === name) {
+          variableProvider.delete(p);
         }
       });
     }
-    this.codeBlocks.set(name, {
+    codeBlocks.set(name, {
       func: f,
       dependencies,
       provides,
       display
     });
-    provides.forEach(p => this.variableProvider.set(p, name));
+    provides.forEach(p => variableProvider.set(p, name));
 
     // Rebuild dependents graph
-    this.dependents.clear();
-    for (const [blockName, block] of this.codeBlocks.entries()) {
+    dependents.clear();
+    for (const [blockName, block] of codeBlocks.entries()) {
       for (const dep of block.dependencies) {
-        const providerName = this.variableProvider.get(dep);
+        const providerName = variableProvider.get(dep);
         if (providerName) {
-          if (!this.dependents.has(providerName)) {
-            this.dependents.set(providerName, new Set());
+          if (!dependents.has(providerName)) {
+            dependents.set(providerName, new Set());
           }
-          this.dependents.get(providerName)!.add(blockName);
+          dependents.get(providerName)!.add(blockName);
         }
       }
     }
@@ -67,7 +93,7 @@ export class Runner {
       }
       path.add(blockName);
 
-      const block = this.codeBlocks.get(blockName);
+      const block = codeBlocks.get(blockName);
       if (!block) {
         path.delete(blockName);
         return;
@@ -78,7 +104,7 @@ export class Runner {
       await block.func();
       (globalThis as any).display = d;
 
-      const blockDependents = this.dependents.get(blockName);
+      const blockDependents = dependents.get(blockName);
       if (blockDependents) {
         for (const dependentName of blockDependents) {
           await executeAndPropagate(dependentName, path);
