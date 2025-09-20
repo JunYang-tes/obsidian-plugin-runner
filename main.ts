@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { transform } from './src/code';
 import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
@@ -23,11 +23,16 @@ export default class MyPlugin extends Plugin {
   async onload() {
     injectStyle()
     await this.loadSettings();
-    const runner = new Runner(builtin)
+    const runner = new Runner({
+      ...builtin,
+      open: async (doc: string) => {
+        await this.openFileUniquely(doc);
+      }
+    })
     console.log(runner)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
-    const runjs = (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
+    const runjs = async (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
         s = block(runner, `block ${count++}`, ctx.sourcePath);
@@ -55,8 +60,7 @@ export default class MyPlugin extends Plugin {
           new EditModal(this.app, src, onSave).open();
         };
       }
-      s.run(src, this, ctx);
-
+      await s.run(src, this, ctx);
     }
     try {
       this.registerMarkdownCodeBlockProcessor("run-js", runjs);
@@ -74,6 +78,25 @@ export default class MyPlugin extends Plugin {
 
   }
 
+  async openFileUniquely(filePath: string, newLeaf: 'tab' | 'split' | 'window' | boolean = 'tab') {
+    const activeLeaf = this.app.workspace.getLeaf();
+
+    // 1. 遍历所有 markdown 类型的 leaf
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of leaves) {
+      // @ts-ignore
+      if (leaf.view?.file?.path === filePath ||
+      // @ts-ignore
+        leaf.view?.state?.file === filePath
+      ) {
+        return
+      }
+    }
+
+    await this.app.workspace.openLinkText(filePath, '', newLeaf);
+    this.app.workspace.setActiveLeaf(activeLeaf)
+  }
+
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
@@ -82,4 +105,3 @@ export default class MyPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 }
-

@@ -26,7 +26,14 @@ export class Runner {
   private getOrInitDocState(doc: string): DocState {
     if (!this.docStates.has(doc)) {
       const globalVarsName = '__g' + Math.random().toString(36).slice(2);
-      const vars = { ...this.initialVars };
+      const vars = {
+        ...this.initialVars,
+        load: async (doc: string) => {
+          await this.initialVars.open(doc);
+          const vars = this.getOrInitDocState(doc).vars
+          return vars
+        }
+      };
       (globalThis as any)[globalVarsName] = vars;
 
       this.docStates.set(doc, {
