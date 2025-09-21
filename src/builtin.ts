@@ -1,5 +1,6 @@
 import van, { PropValueOrDerived } from 'vanjs-core'
 import { dirname, resolve } from 'path'
+import { Notice } from 'obsidian'
 const log = (...args: any[]) => {
   console.log(...args)
   // let it be shown in current container via display function
@@ -59,6 +60,9 @@ export function createRequireJs(docPath: string) {
 
 export const builtin = {
   console: { log, error: log, warn: log, trace: log },
+  notice(msg: string) {
+    new Notice(msg);
+  },
   id: (i: any) => i,
   ui,
 }
