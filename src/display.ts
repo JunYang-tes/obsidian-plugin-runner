@@ -7,6 +7,11 @@ export function getDisplay(container: HTMLElement) {
     if(val instanceof HTMLElement) {
       container.innerHTML = ""
       container.appendChild(val)
+    } else if(val instanceof Promise) {
+      val.then(v => {
+        inspector.fulfilled(v);
+      })
+      .catch(e=>inspector.fulfilled(e))
     } else {
       inspector.fulfilled(val);
     }
