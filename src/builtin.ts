@@ -1,4 +1,5 @@
 import van, { PropValueOrDerived } from 'vanjs-core'
+import { dirname, resolve } from 'path'
 const log = (...args: any[]) => {
   console.log(...args)
   // let it be shown in current container via display function
@@ -46,6 +47,14 @@ const ui = new Proxy({}, {
     }
   }
 })
+
+export function createRequireJs(docPath: string) {
+  const dir = dirname(docPath)
+  return (relativePath: string) => {
+    const full = resolve(dir, relativePath)
+    return require(full)
+  }
+}
 
 
 export const builtin = {

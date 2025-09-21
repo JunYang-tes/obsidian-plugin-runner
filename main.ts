@@ -1,11 +1,12 @@
-import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import { App, Editor, FileSystemAdapter, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { transform } from './src/code';
 import { Runner } from 'src/runner';
 import { getDisplay } from 'src/display';
-import { builtin } from 'src/builtin';
+import { builtin, createRequireJs } from 'src/builtin';
 import { injectStyle } from 'src/style'
 import { block, Block } from 'src/block';
 import { EditModal } from './src/EditModal';
+import { resolve } from 'path'
 
 // Remember to rename these classes and interfaces!
 
@@ -29,13 +30,19 @@ export default class MyPlugin extends Plugin {
         await this.openFileUniquely(doc);
       }
     })
-    console.log(runner)
+    console.log(runner, this.app)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
     const runjs = async (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
         s = block(runner, `block ${count++}`, ctx.sourcePath);
+        if (this.app.vault.adapter instanceof FileSystemAdapter) {
+          const base = (this.app.vault.adapter as FileSystemAdapter).getBasePath()
+          runner.registerBuiltin(ctx.sourcePath,{
+            requireJs: createRequireJs(resolve(base, ctx.sourcePath))
+          })
+        }
         states.set(el, s);
         el.appendChild(s.dom);
 
@@ -86,7 +93,7 @@ export default class MyPlugin extends Plugin {
     for (const leaf of leaves) {
       // @ts-ignore
       if (leaf.view?.file?.path === filePath ||
-      // @ts-ignore
+        // @ts-ignore
         leaf.view?.state?.file === filePath
       ) {
         return

@@ -47,6 +47,11 @@ export class Runner {
     return this.docStates.get(doc)!;
   }
 
+  public registerBuiltin(doc: string, vars: any) {
+    const state = this.getOrInitDocState(doc);
+    Object.assign(state.vars, vars)
+  }
+
   async run(
     src: string, name: string, doc: string,
     display: (val: any) => void,
