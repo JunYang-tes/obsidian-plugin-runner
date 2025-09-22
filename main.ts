@@ -28,6 +28,12 @@ export default class MyPlugin extends Plugin {
       ...builtin,
       open: async (doc: string) => {
         await this.openFileUniquely(doc);
+      },
+      getVaultPath: () => {
+        if (this.app.vault.adapter instanceof FileSystemAdapter) {
+          return (this.app.vault.adapter as FileSystemAdapter).getBasePath()
+        }
+        return ''
       }
     })
     console.log(runner, this.app)
@@ -36,38 +42,17 @@ export default class MyPlugin extends Plugin {
     const runjs = async (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
-        s = block(runner, `block ${count++}`, ctx.sourcePath);
+        s = block(runner, `block ${count++}`, ctx, this, el);
         if (this.app.vault.adapter instanceof FileSystemAdapter) {
           const base = (this.app.vault.adapter as FileSystemAdapter).getBasePath()
-          runner.registerBuiltin(ctx.sourcePath,{
+          runner.registerBuiltin(ctx.sourcePath, {
             requireJs: createRequireJs(resolve(base, ctx.sourcePath))
           })
         }
         states.set(el, s);
         el.appendChild(s.dom);
-
-        const controls = el.createDiv({ cls: 'plugin-runner-controls' });
-        const editButton = controls.createEl('button', { text: 'Edit' });
-        editButton.onclick = () => {
-          const onSave = (newCode: string) => {
-            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-              const section = ctx.getSectionInfo(el);
-              if (section) {
-                // We only want to replace the code inside the block
-                view.editor.replaceRange(
-                  newCode,
-                  { line: section.lineStart + 1, ch: 0 },
-                  { line: section.lineEnd - 1, ch: view.editor.getLine(section.lineEnd - 1).length }
-                );
-              }
-            }
-          };
-
-          new EditModal(this.app, src, onSave).open();
-        };
       }
-      await s.run(src, this, ctx);
+      await s.run(src);
     }
     try {
       this.registerMarkdownCodeBlockProcessor("run-js", runjs);

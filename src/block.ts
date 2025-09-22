@@ -1,12 +1,14 @@
 import van, { PropValueOrDerived } from 'vanjs-core'
 import { Runner } from './runner'
 import { getDisplay } from './display'
-import { MarkdownPostProcessorContext, MarkdownRenderer, Plugin } from 'obsidian'
+import { App, MarkdownPostProcessorContext, MarkdownRenderer, MarkdownView, Plugin } from 'obsidian'
 import { style } from './builtin'
+import { EditModal } from './EditModal'
 
 export type Block = ReturnType<typeof block>
-export function block(runner: Runner, name: string, doc: string) {
-  const codeExpanded = van.state(false)
+export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorContext, plugin: Plugin, root: HTMLElement) {
+  const doc = ctx.sourcePath;
+  const codeExpanded = van.state(true)
   const { div, button } = van.tags
   const disEl = div()
   const display = getDisplay(disEl);
@@ -19,6 +21,16 @@ export function block(runner: Runner, name: string, doc: string) {
       })
     },
   )
+  let currentSrc = ""
+
+  const run = (src: string) => {
+    currentSrc = src;
+    srcDom.innerHTML = '';
+    MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
+    return runner
+      .run(src, name, doc, display, Object.keys(globalThis))
+      .catch(display)
+  }
   const dom = div(
     {
       "data-name": "Block Container",
@@ -27,10 +39,53 @@ export function block(runner: Runner, name: string, doc: string) {
         border: '1px solid #ccc',
         borderRadius: '4px',
         flexDirection: 'column',
+        padding: '10px',
         gap: '10px'
       })
     },
     srcDom,
+    div(
+      {
+        style: style({
+          display: 'flex',
+          gap: '10px'
+        }),
+      },
+      button({ onclick: () => codeExpanded.val = (!codeExpanded.val) },
+        () => codeExpanded.val ? 'Show Source' : 'Hide Source',
+      ),
+      button(
+        {
+          onclick: () => {
+            const onSave = (newCode: string) => {
+              const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+              if (view) {
+                const section = ctx.getSectionInfo(root);
+                if (section) {
+                  // We only want to replace the code inside the block
+                  view.editor.replaceRange(
+                    newCode,
+                    { line: section.lineStart + 1, ch: 0 },
+                    { line: section.lineEnd - 1, ch: view.editor.getLine(section.lineEnd - 1).length }
+                  );
+                }
+              }
+            };
+
+            new EditModal(plugin.app, currentSrc, onSave).open();
+          }
+        },
+        'Edit'
+      ),
+      button(
+        {
+          onclick: () => {
+            run(currentSrc,)
+          }
+        },
+        'Rerun',
+      )
+    ),
     van.tags.hr(),
     div(
       {
@@ -44,12 +99,6 @@ export function block(runner: Runner, name: string, doc: string) {
   )
   return {
     dom,
-    run(src: string, plugin: Plugin, ctx: MarkdownPostProcessorContext
-    ) {
-      MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
-      return runner
-        .run(src, name, doc, display,Object.keys(globalThis))
-        .catch(display)
-    }
+    run,
   }
 }
