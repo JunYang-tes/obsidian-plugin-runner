@@ -22,11 +22,46 @@ export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorCo
     },
   )
   let currentSrc = ""
+  const { style: vanStyle } = van.tags;
+  const loading = div(
+    {
+      style: style({
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        padding: '20px',
+        minHeight: '50px',
+      })
+    },
+    vanStyle(`
+      .loader {
+        border: 4px solid #f3f3f3; /* Light grey */
+        border-top: 4px solid var(--interactive-accent, #4884f1); /* Blue */
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `),
+    div({ class: 'loader' }),
+    div('Loading...')
+  );
 
   const run = (src: string) => {
     currentSrc = src;
     srcDom.innerHTML = '';
-    MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
+    try {
+      MarkdownRenderer.render(plugin.app, `\`\`\`js\n${src}\n\`\`\``, srcDom, ctx.sourcePath, plugin)
+    } catch (e) {
+      console.error(e)
+    }
+    display(loading)
     return runner
       .run(src, name, doc, display, Object.keys(globalThis))
       .catch(display)
