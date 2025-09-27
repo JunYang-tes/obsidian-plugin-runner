@@ -18,6 +18,7 @@ export class EditModal extends Modal {
   private onSave: (newCode: string) => void;
   // @ts-ignore
   private editor: monaco.editor.IStandaloneCodeEditor;
+  private closable = false;
 
   constructor(app: App, code: string, onSave: (newCode: string) => void) {
     super(app);
@@ -27,8 +28,10 @@ export class EditModal extends Modal {
       this.modalEl.style,
       {
         height: '80vh',
+        width: '80vw',
         display: 'grid',
-        gridTemplateRows: 'auto 1fr auto'
+        gridTemplateRows: 'auto minmax(100px,1fr) auto',
+        gridTemplateColumns: 'minmax(100px,1fr)',
       }
     )
   }
@@ -39,6 +42,10 @@ export class EditModal extends Modal {
     contentEl.addClass('plugin-runner-edit-modal');
 
     this.titleEl.setText('Edit Code');
+    this.modalEl.querySelector('.modal-close-button')
+      ?.addEventListener('click', () => {
+        super.close()
+      })
 
     try {
       const monaco = await loadMonaco();
@@ -50,14 +57,15 @@ export class EditModal extends Modal {
   }
 
   displayEditor(contentEl: HTMLElement, monaco: any) {
-    Object.assign(contentEl.style,{
+    Object.assign(contentEl.style, {
       display: 'flex',
       flexDirection: 'column',
     })
     const editorContainer = contentEl.createDiv({ cls: 'editor-container' });
     Object.assign(editorContainer.style, {
       border: '1px solid #ccc',
-      height: '100%',
+      flexGrow: 1,
+      overflow: 'auto',
     })
 
     //@ts-ignore
@@ -77,8 +85,12 @@ export class EditModal extends Modal {
     saveButton.onclick = () => {
       const newCode = this.editor.getValue();
       this.onSave(newCode);
-      this.close();
+      this.closable = true;
+      super.close();
     };
+  }
+
+  close() {
   }
 
   onClose() {
