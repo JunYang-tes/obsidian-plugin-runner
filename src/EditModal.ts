@@ -1,15 +1,8 @@
 import { App, Modal, MarkdownView } from 'obsidian';
-import van from 'vanjs-core';
-
-// A global promise to avoid loading monaco more than once
-let monacoPromise: Promise<any> | null = null;
 
 async function loadMonaco(container: HTMLElement) {
-  if (monacoPromise) {
-    return monacoPromise;
-  }
 
-  monacoPromise = new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
       width: '100%',
@@ -38,7 +31,6 @@ async function loadMonaco(container: HTMLElement) {
         <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.js"></script>
       </head>
       <body>
-        <div>Hello</div>
         <div id="editor"></div>
         <script>
 fetch("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor/editor.main.css")
@@ -97,13 +89,9 @@ fetch("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor
     iframe.src = URL.createObjectURL(blob);
     iframe.onload = () => {
       //@ts-ignore
-      resolve(iframe.contentwindow.editor)
+      resolve(iframe.contentWindow.editor)
     }
-
-
   });
-
-  return monacoPromise;
 }
 
 
@@ -145,23 +133,17 @@ export class EditModal extends Modal {
     try {
       this.editor = await loadMonaco(contentEl);
       this.editor.setValue(this.code)
+      const saveButton = this.modalEl.createEl('button', { text: 'Save' });
+      saveButton.onclick = () => {
+        const newCode = this.editor.getValue();
+        this.onSave(newCode);
+        this.closable = true;
+        super.close();
+      };
     } catch (error) {
       contentEl.setText('Failed to load code editor. Please check your internet connection and try again.');
       console.error(error);
     }
-  }
-
-  displayEditor(contentEl: HTMLElement) {
-    const saveButton = this.modalEl.createEl('button', { text: 'Save' });
-    saveButton.onclick = () => {
-      const newCode = this.editor.getValue();
-      this.onSave(newCode);
-      this.closable = true;
-      super.close();
-    };
-  }
-
-  close() {
   }
 
   onClose() {
