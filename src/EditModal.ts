@@ -1,5 +1,65 @@
 import { App, Modal, MarkdownView } from 'obsidian';
 
+const buildinDts = `
+interface State<T> {
+ val: T
+ readonly oldVal: T
+ readonly rawVal: T
+}
+
+// Defining readonly view of State<T> for covariance.
+// Basically we want StateView<string> to implement StateView<string | number>
+type StateView<T> = Readonly<State<T>>
+
+type Val<T> = State<T> | T
+
+ type Primitive = string | number | boolean | bigint
+
+ type PropValue = Primitive | ((e: any) => void) | null
+
+ type PropValueOrDerived = PropValue | StateView<PropValue> | (() => PropValue)
+
+ type Props = Record<string, PropValueOrDerived> & { class?: PropValueOrDerived; is?: string }
+
+ type PropsWithKnownKeys<ElementType> = Partial<{[K in keyof ElementType]: PropValueOrDerived}>
+
+ type ValidChildDomValue = Primitive | Node | null | undefined
+
+ type BindingFunc = ((dom?: Node) => ValidChildDomValue) | ((dom?: Element) => Element)
+
+
+ type ChildDom = ValidChildDomValue | StateView<Primitive | null | undefined> | BindingFunc | readonly ChildDom[]
+
+ type TagFunc<Result> = (first?: Props & PropsWithKnownKeys<Result> | ChildDom, ...rest: readonly ChildDom[]) => Result
+
+type Tags = Readonly<Record<string, TagFunc<Element>>> & {
+  [K in keyof HTMLElementTagNameMap]: TagFunc<HTMLElementTagNameMap[K]>
+}
+
+ function state<T>(): State<T>
+ function state<T>(initVal: T): State<T>
+
+ interface Van {
+  readonly state: typeof state
+  readonly derive: <T>(f: () => T) => State<T>
+  readonly add: (dom: Element | DocumentFragment, ...children: readonly ChildDom[]) => Element
+  readonly tags: Tags & ((namespaceURI: string) => Readonly<Record<string, TagFunc<Element>>>)
+  readonly hydrate: <T extends Node>(dom: T, f: (dom: T) => T | null | undefined) => T
+}
+type UI = Tags & {
+  style: (s: { [k in keyof CSSStyleDeclaration]?: PropValueOrDerived })=> string
+  state: Van['state']
+  derive: Van['derive']
+  hydrate: Van['hydrate']
+}
+declare const ui: UI
+declare function notice(msg: string): void
+declare function id<T>(i: T): T
+declare function requireJs(path: string): any
+declare function open(doc: string): Promise<void>
+declare function getVaultPath(): string
+`
+
 async function loadMonaco(container: HTMLElement) {
 
   return new Promise((resolve, reject) => {
@@ -64,6 +124,7 @@ fetch("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor
               parameterHints: { enabled: true },
               wordWrap: 'on',
             });
+            monaco.languages.typescript.javascriptDefaults.addExtraLib(${JSON.stringify(buildinDts)},'buildin.d.ts');
 
             monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
               target: monaco.languages.typescript.ScriptTarget.ES2020,
