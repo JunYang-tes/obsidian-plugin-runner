@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transform } from './code';
+import { transform, normalizeVariableDeclarations } from './code';
 
 describe('transform', () => {
   it('should wrap the code in a function and add "globalVars." prefix to undeclared variables', () => {
@@ -110,5 +110,82 @@ describe('transform dependencies and provides', () => {
     const { dependencies, provides } = transform(sourceCode);
     expect(dependencies.sort()).toEqual(['b', 'd'].sort());
     expect(provides.sort()).toEqual(['a', 'c'].sort());
+  });
+});
+
+describe('normalizeVariableDeclarations', () => {
+  it('should remove top-level const/let and replace with assignments', () => {
+    const sourceCode = `const a = 1;
+let b = 2;`;
+    const expectedCode = `a = 1;
+b = 2;`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
+
+  it('should add const to undeclared variable assignments', () => {
+    const sourceCode = 'a = 1;';
+    const expectedCode = 'const a = 1;';
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
+
+  it('should handle a mix of declared and undeclared variables', () => {
+    const sourceCode = `const a = 1;
+b = 2;
+a = 3;`;
+    const expectedCode = `a = 1;
+const b = 2;
+a = 3;`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
+
+  it('should remove top-level declarations without initializers', () => {
+    const sourceCode = `let a;
+const b = 2;`;
+    const expectedCode = `b = 2;`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
+
+  it('should not change declarations inside functions', () => {
+    const sourceCode = `function myFunction() {
+  const a = 1;
+  let b;
+}`;
+    const expectedCode = `function myFunction() {
+  const a = 1;
+  let b;
+}`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
+
+
+  it('should preserve comments', () => {
+    const sourceCode = `
+// This is a declared variable
+const a = 1;
+
+// This is an undeclared variable
+b = 2;`;
+    const expectedCode = `
+// This is a declared variable
+a = 1; // This is an undeclared variable
+const b = 2;
+`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    const clean = (str) => str.split('\n').map(s => s.trim()).filter(s => s).join('\n');
+    //throw(clean(expectedCode)+"\n"+clean(result))
+    expect(clean(result)).toBe(clean(expectedCode));
+  });
+
+  it('should handle multiple declarators in one statement', () => {
+    const sourceCode = `const a = 1, b = 2;`;
+    const expectedCode = `a = 1;
+b = 2;`;
+    const result = normalizeVariableDeclarations(sourceCode);
+    expect(result.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
   });
 });

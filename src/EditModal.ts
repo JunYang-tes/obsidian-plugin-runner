@@ -62,7 +62,7 @@ declare function getVaultPath(): string
 
 async function loadMonaco(container: HTMLElement) {
 
-  return new Promise((resolve, reject) => {
+  return new Promise<{editor: any, monaco: any}>((resolve, reject) => {
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
       width: '100%',
@@ -140,6 +140,7 @@ fetch("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor
 
             // Store editor reference on window for access from parent
             window.editor = editor;
+            window.monaco = monaco;
           });
         </script>
       </body>
@@ -149,8 +150,12 @@ fetch("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor
     const blob = new Blob([src], { type: 'text/html' });
     iframe.src = URL.createObjectURL(blob);
     iframe.onload = () => {
-      //@ts-ignore
-      resolve(iframe.contentWindow.editor)
+      resolve({
+        //@ts-ignore
+        editor: iframe.contentWindow.editor,
+        //@ts-ignore
+        monaco: iframe.contentWindow.monaco,
+      })
     }
   });
 }
@@ -164,7 +169,9 @@ export class EditModal extends Modal {
   private monaco: any;
   private closable = false;
 
-  constructor(app: App, code: string, onSave: (newCode: string) => void) {
+  constructor(app: App, code: string, onSave: (newCode: string) => void,
+    private extralibs: Array<{name: string, code: string}>
+  ) {
     super(app);
     this.code = code;
     this.onSave = onSave;
@@ -192,8 +199,23 @@ export class EditModal extends Modal {
       })
 
     try {
-      this.editor = await loadMonaco(contentEl);
+      const { editor, monaco } = await loadMonaco(contentEl);
+      this.editor = editor
       this.editor.setValue(this.code)
+            monaco.languages.typescript.javascriptDefaults.addExtraLib(`
+                                                                       test = 1;
+                                                                       function add(
+                                                                         /** @type {number} */
+                                                                         a,
+                                                                         /** @type {number} */
+                                                                         b) {
+                                                                         return a+b
+                                                                       }
+
+                                                                       `,'1.js');
+      this.extralibs.forEach(({name,code})=>{
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(code,name);
+      })
       const saveButton = this.modalEl.createEl('button', { text: 'Save' });
       saveButton.onclick = () => {
         const newCode = this.editor.getValue();
