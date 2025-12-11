@@ -4,9 +4,17 @@ import { getDisplay } from './display'
 import { App, MarkdownPostProcessorContext, MarkdownRenderer, MarkdownView, Plugin } from 'obsidian'
 import { style } from './builtin'
 import { EditModal } from './EditModal'
+import { normalizeVariableDeclarations } from './code'
 
-export type Block = ReturnType<typeof block>
-export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorContext, plugin: Plugin, root: HTMLElement) {
+export type Block = {
+  dom: HTMLElement
+  getCode: () => string
+  run: (src: string) => Promise<void>
+}
+export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorContext, plugin: Plugin,
+  root: HTMLElement,
+  blocks: Block[]
+) {
   const doc = ctx.sourcePath;
   const codeExpanded = van.state(true)
   const { div, button } = van.tags
@@ -106,8 +114,22 @@ export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorCo
                 }
               }
             };
+            console.log(blocks)
 
-            new EditModal(plugin.app, currentSrc, onSave).open();
+            new EditModal(plugin.app, currentSrc, onSave,
+              blocks.map((b, i) => {
+                try {
+                  return {
+                    name: `block_${i}`,
+                    code: normalizeVariableDeclarations(b.getCode())
+                  }
+
+                } catch (e) {
+                  console.error(e)
+                }
+              })
+                .filter((i: any): i is { name: string, code: string } => i != null)
+            ).open();
           }
         },
         'Edit'
@@ -134,6 +156,9 @@ export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorCo
   )
   return {
     dom,
+    getCode() {
+      return currentSrc
+    },
     run,
   }
 }

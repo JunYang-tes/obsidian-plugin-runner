@@ -39,10 +39,15 @@ export default class MyPlugin extends Plugin {
     console.log(runner, this.app)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
+    const docBlocks: Record<string, Block[]> = {};
     const runjs = async (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
-        s = block(runner, `block ${count++}`, ctx, this, el);
+        const blocks = docBlocks[ctx.sourcePath] || (docBlocks[ctx.sourcePath] = []);
+        s = block(runner, `block ${count++}`, ctx, this, el,
+          [...blocks]
+        );
+        blocks.push(s);
         if (this.app.vault.adapter instanceof FileSystemAdapter) {
           const base = (this.app.vault.adapter as FileSystemAdapter).getBasePath()
           runner.registerBuiltin(ctx.sourcePath, {
