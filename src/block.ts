@@ -117,7 +117,18 @@ export function block(runner: Runner, name: string, ctx: MarkdownPostProcessorCo
             console.log(blocks)
 
             new EditModal(plugin.app, currentSrc, onSave,
-              blocks.map((b, i) => ({ name: `block_${i}`, code: normalizeVariableDeclarations(b.getCode()) }))
+              blocks.map((b, i) => {
+                try {
+                  return {
+                    name: `block_${i}`,
+                    code: normalizeVariableDeclarations(b.getCode())
+                  }
+
+                } catch (e) {
+                  console.error(e)
+                }
+              })
+                .filter((i: any): i is { name: string, code: string } => i != null)
             ).open();
           }
         },

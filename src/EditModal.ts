@@ -202,17 +202,6 @@ export class EditModal extends Modal {
       const { editor, monaco } = await loadMonaco(contentEl);
       this.editor = editor
       this.editor.setValue(this.code)
-            monaco.languages.typescript.javascriptDefaults.addExtraLib(`
-                                                                       test = 1;
-                                                                       function add(
-                                                                         /** @type {number} */
-                                                                         a,
-                                                                         /** @type {number} */
-                                                                         b) {
-                                                                         return a+b
-                                                                       }
-
-                                                                       `,'1.js');
       this.extralibs.forEach(({name,code})=>{
         monaco.languages.typescript.javascriptDefaults.addExtraLib(code,name);
       })
