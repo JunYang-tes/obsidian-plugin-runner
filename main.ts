@@ -6,7 +6,7 @@ import { builtin, createRequireJs } from 'src/builtin';
 import { injectStyle } from 'src/style'
 import { block, Block } from 'src/block';
 import { EditModal } from './src/EditModal';
-import { resolve } from 'path'
+import { dirname, resolve } from 'path'
 
 // Remember to rename these classes and interfaces!
 
@@ -51,6 +51,7 @@ export default class MyPlugin extends Plugin {
         if (this.app.vault.adapter instanceof FileSystemAdapter) {
           const base = (this.app.vault.adapter as FileSystemAdapter).getBasePath()
           runner.registerBuiltin(ctx.sourcePath, {
+            resolvePath: (p: string) => resolve(base, dirname(ctx.sourcePath), p),
             requireJs: createRequireJs(resolve(base, ctx.sourcePath))
           })
         }
