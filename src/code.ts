@@ -9,14 +9,21 @@ export function transform(src: string, globals: string[] = [], globalVarsName = 
   const ast = parse(src, { sourceType: 'module' });
   const allGlobals = [...globals, globalVarsName];
 
+  const topLevelFunctionNames = new Set<string>();
+  for (const node of ast.program.body) {
+    if (t.isFunctionDeclaration(node) && node.id) {
+      topLevelFunctionNames.add(node.id.name);
+    }
+  }
+
   traverse(ast, {
     ReferencedIdentifier(path) {
-      if (t.isIdentifier(path.node) && isUndeclaredVariable(path.scope, path.node.name, allGlobals)) {
+      if (t.isIdentifier(path.node) && (isUndeclaredVariable(path.scope, path.node.name, allGlobals) || topLevelFunctionNames.has(path.node.name))) {
         path.replaceWith(t.memberExpression(t.identifier(globalVarsName), path.node));
       }
     },
     AssignmentExpression(path) {
-      if (t.isIdentifier(path.node.left) && isUndeclaredVariable(path.scope, path.node.left.name, allGlobals)) {
+      if (t.isIdentifier(path.node.left) && (isUndeclaredVariable(path.scope, path.node.left.name, allGlobals) || topLevelFunctionNames.has(path.node.left.name))) {
         path.get('left').replaceWith(t.memberExpression(t.identifier(globalVarsName), path.node.left));
       }
     },

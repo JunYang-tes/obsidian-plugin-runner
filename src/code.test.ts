@@ -80,6 +80,16 @@ describe('transform', () => {
     expect(dependencies).toEqual([]);
     expect(provides).toEqual([]);
   });
+
+  it('should transform function calls of top-level function declarations to globalVars', () => {
+    const sourceCode = 'function a() {} a();';
+    const { code } = transform(sourceCode);
+    const expectedCode = `async function () {
+      globalVars.a = function a() {};
+      display(globalVars.a());
+    }`;
+    expect(code.replace(/\s/g, '')).toBe(expectedCode.replace(/\s/g, ''));
+  });
 });
 
 
