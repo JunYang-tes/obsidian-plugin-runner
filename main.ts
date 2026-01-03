@@ -20,11 +20,13 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
+  docBlocks: Record<string, Block[]> = {};
+  runner: Runner;
 
   async onload() {
     injectStyle()
     await this.loadSettings();
-    const runner = new Runner({
+    this.runner = new Runner({
       ...builtin,
       open: async (doc: string) => {
         await this.openFileUniquely(doc);
@@ -36,21 +38,20 @@ export default class MyPlugin extends Plugin {
         return ''
       }
     })
-    console.log(runner, this.app)
+    console.log(this.runner, this.app)
     let count = 0;
     const states = new WeakMap<HTMLElement, Block>();
-    const docBlocks: Record<string, Block[]> = {};
     const runjs = async (src: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
       let s = states.get(el);
       if (s == null) {
-        const blocks = docBlocks[ctx.sourcePath] || (docBlocks[ctx.sourcePath] = []);
-        s = block(runner, `block ${count++}`, ctx, this, el,
+        const blocks = this.docBlocks[ctx.sourcePath] || (this.docBlocks[ctx.sourcePath] = []);
+        s = block(this.runner, `block ${count++}`, ctx, this, el,
           [...blocks]
         );
         blocks.push(s);
         if (this.app.vault.adapter instanceof FileSystemAdapter) {
           const base = (this.app.vault.adapter as FileSystemAdapter).getBasePath()
-          runner.registerBuiltin(ctx.sourcePath, {
+          this.runner.registerBuiltin(ctx.sourcePath, {
             resolvePath: (p: string) => resolve(base, dirname(ctx.sourcePath), p),
             requireJs: createRequireJs(resolve(base, ctx.sourcePath))
           })
@@ -70,10 +71,29 @@ export default class MyPlugin extends Plugin {
     } catch (e) {
       new Notice('Failed to register code block processor with exec-js, is it occupied by other plugin?');
     }
+
+    this.registerEvent(this.app.workspace.on('layout-change', () => {
+      const activeFiles = new Set<string>();
+      this.app.workspace.iterateAllLeaves((leaf) => {
+        if (leaf.view instanceof MarkdownView && leaf.view.file) {
+          activeFiles.add(leaf.view.file.path);
+        }
+      });
+
+      for (const path in this.docBlocks) {
+        if (!activeFiles.has(path)) {
+          delete this.docBlocks[path];
+          this.runner.clearDoc(path);
+        }
+      }
+    }));
   }
 
   onunload() {
-
+    for (const path in this.docBlocks) {
+      this.runner.clearDoc(path);
+    }
+    this.docBlocks = {};
   }
 
   async openFileUniquely(filePath: string, newLeaf: 'tab' | 'split' | 'window' | boolean = 'tab') {

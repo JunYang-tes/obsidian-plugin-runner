@@ -52,6 +52,14 @@ export class Runner {
     Object.assign(state.vars, vars)
   }
 
+  public clearDoc(doc: string) {
+    const state = this.docStates.get(doc);
+    if (state) {
+      delete (globalThis as any)[state.globalVarsName];
+      this.docStates.delete(doc);
+    }
+  }
+
   async run(
     src: string, name: string, doc: string,
     display: (val: any) => void,
